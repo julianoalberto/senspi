@@ -22,15 +22,14 @@ FOOD = Cell("o")
 SNAKE = Cell("S")
 SNAKE_EDGE = Cell("X")
 
-LINES = 8
-COLUMNS = 8
+DIMENSION = 4
 
 class Snake:
     def __init__(self):
-        self.grid = Grid(LINES, COLUMNS)
+        self.grid = Grid(DIMENSION, DIMENSION)
         self.grid.fill(EMPTY)
-        self.line = 3
-        self.column = 3
+        self.line = round(DIMENSION / 2)
+        self.column = self.line
         self.snake = SNAKE
         self.grid.set(self.line, self.column, self.snake)
 
@@ -50,8 +49,8 @@ class Snake:
 
     def randomfood(self):
         random.seed()
-        line = random.randrange(0, LINES)
-        column = random.randrange(0, COLUMNS)
+        line = random.randrange(0, DIMENSION)
+        column = random.randrange(0, DIMENSION)
 
         if not self.hassnake(line, column):
             self.grid.set(line, column, FOOD)
@@ -81,13 +80,13 @@ class Snake:
         # header
         s = "Use ←↑↓→ \n"
         s += " " + "|"
-        for c in range(0, COLUMNS):
+        for c in range(0, DIMENSION):
             s += str(c) + " "
         s += "\n"
 
-        for l in range(0, LINES):
+        for l in range(0, DIMENSION):
             s += str(l) +"|"
-            for c in range(0, COLUMNS):
+            for c in range(0, DIMENSION):
                 s += self.grid.get(l, c).content
                 s += " "
             s += "\n"
