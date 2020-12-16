@@ -1,12 +1,20 @@
 from grid import Grid
 from grid import Cell
 import random
+import readchar
 
-# directions / key mapping
+# directions
 RIGHT = "d"
 LEFT = "a"
 UP = "w"
 DOWN = "s"
+
+# key mapping
+KEY_UP = "'\\x1b[A'"
+KEY_DOWN = "'\\x1b[B'"
+KEY_LEFT = "'\\x1b[D'"
+KEY_RIGHT = "'\\x1b[C'"
+KEY_QUIT = "'q'"
 
 # cell content
 EMPTY = Cell(" ")
@@ -55,7 +63,7 @@ class Snake:
     def start(self):
         while True:
             self.display()
-            key = input("Command: ")
+            key = repr(readchar.readkey())
             self.processkey(key)
 
     def display(self):
@@ -71,7 +79,8 @@ class Snake:
         self.grid.set(self.foodline, self.foodcolumn, FOOD)
         
         # header
-        s = " " + "|"
+        s = "Use ←↑↓→ \n"
+        s += " " + "|"
         for c in range(0, COLUMNS):
             s += str(c) + " "
         s += "\n"
@@ -82,7 +91,6 @@ class Snake:
                 s += self.grid.get(l, c).content
                 s += " "
             s += "\n"
-        
         s += "Score: " + str(self.eaten)
         print('\x1bc') # clear
         print(s)   
@@ -143,15 +151,15 @@ class Snake:
             return False
             
     def processkey(self, key):
-        if key == UP:
+        if key == KEY_UP:
             self.move(UP)
-        elif key == DOWN:
+        elif key == KEY_DOWN:
             self.move(DOWN)
-        elif key == LEFT:
+        elif key == KEY_LEFT:
             self.move(LEFT)
-        elif key == RIGHT:
+        elif key == KEY_RIGHT:
             self.move(RIGHT)
-        elif key == "q":
+        elif key == KEY_QUIT:
             quit()
         
 s = Snake()
