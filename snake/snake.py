@@ -1,13 +1,16 @@
+#!/bin/python3
 from grid import Grid
 from grid import Cell
+from position import Position
 import random
 import readchar
 
 # directions
-RIGHT = "d"
-LEFT = "a"
-UP = "w"
-DOWN = "s"
+RIGHT = 6
+LEFT = 4
+UP = 8
+DOWN = 2
+NONE = 5
 
 # key mapping
 KEY_UP = "'\\x1b[A'"
@@ -18,23 +21,31 @@ KEY_QUIT = "'q'"
 
 # cell content
 EMPTY = Cell(" ")
-FOOD = Cell("o")
-SNAKE = Cell("S")
-SNAKE_EDGE = Cell("X")
+FOOD = Cell("X")
 
-DIMENSION = 4
+SNAKE_BODY = Cell("o")
+SNAKE_TAIL = Cell("*")
+SNAKE_UP = Cell("ʌ")
+SNAKE_DOWN = Cell("v")
+SNAKE_LEFT = Cell("<")
+SNAKE_RIGHT = Cell(">")
+
+DIMENSION = 9
 
 class Snake:
+    key = None
     def __init__(self):
         self.grid = Grid(DIMENSION, DIMENSION)
         self.grid.fill(EMPTY)
         self.line = round(DIMENSION / 2)
         self.column = self.line
-        self.snake = SNAKE
+        self.snake = SNAKE_UP
         self.grid.set(self.line, self.column, self.snake)
-
+        self.position = Position(self.line, self.column)
         self.foodline = -1
         self.foodcolumn = -1
+        self.movingdir = UP
+        self.alive = True
 
         self.eaten = 0
 
@@ -42,7 +53,12 @@ class Snake:
         self.start()
 
     def hassnake(self, line, column):
-        return (line == self.line) and (column == self.column)
+        return self.grid.get(line, column) == SNAKE_BODY \
+                or self.grid.get(line, column) == SNAKE_TAIL \
+                or self.grid.get(line, column) == SNAKE_UP \
+                or self.grid.get(line, column) == SNAKE_DOWN \
+                or self.grid.get(line, column) == SNAKE_LEFT \
+                or self.grid.get(line, column) == SNAKE_RIGHT
     
     def hasfood(self, line, column):
         return (line == self.foodline) and (column == self.foodcolumn)
@@ -52,7 +68,7 @@ class Snake:
         line = random.randrange(0, DIMENSION)
         column = random.randrange(0, DIMENSION)
 
-        if not self.hassnake(line, column):
+        if not self.hassnake(line, column) and not self.hasfood(line, column):
             self.grid.set(line, column, FOOD)
             self.foodline = line
             self.foodcolumn = column
@@ -63,20 +79,35 @@ class Snake:
         while True:
             self.display()
             key = repr(readchar.readkey())
-            self.processkey(key)
+            self.processkey(key)            
 
     def display(self):
-        if self.inedge():
-            self.snake = SNAKE_EDGE
-        else:
-            self.snake = SNAKE
-
         # clears grid
         self.grid.fill(EMPTY)
         # update elements
-        self.grid.set(self.line, self.column, self.snake)
         self.grid.set(self.foodline, self.foodcolumn, FOOD)
         
+        pos = self.position
+        while pos != None:
+            self.grid.set(pos.line, pos.column, self.snake)
+            self.snake = SNAKE_BODY
+            pos = pos.next
+        
+        if self.movingdir == UP:
+            self.snake = SNAKE_UP
+        if self.movingdir == DOWN:
+            self.snake = SNAKE_DOWN
+        if self.movingdir == LEFT:
+            self.snake = SNAKE_LEFT
+        if self.movingdir == RIGHT:
+            self.snake = SNAKE_RIGHT
+        self.grid.set(self.position.line, self.position.column, self.snake)
+
+        pos = self.position
+        if pos.size() > 2:
+            self.grid.set(pos.tail().line, pos.tail().column, SNAKE_TAIL)
+        
+
         # header
         s = "Use ←↑↓→ \n"
         s += " " + "|"
@@ -90,16 +121,16 @@ class Snake:
                 s += self.grid.get(l, c).content
                 s += " "
             s += "\n"
+
+        # footer
         s += "Score: " + str(self.eaten)
+        s += "\nLeft : " + str(DIMENSION * DIMENSION - self.eaten)
+        #s += "\n" + str(self.position)
+        s += "\nMoving: " + str(self.movingdir)
+        s += "\nAlive: " + str(self.alive)
         print('\x1bc') # clear
         print(s)   
         
-    def inedge(self):
-        return not (self.canmove(UP) \
-            and self.canmove(DOWN) \
-            and self.canmove(RIGHT) \
-            and self.canmove(LEFT))
-
     # return (line, column) for given direction
     # return (-1, -1) if out of grid
     def neighbor(self, direction):
@@ -114,7 +145,7 @@ class Snake:
         if direction == DOWN:
             l += 1
 
-        if self.grid.inrange(l, c):
+        if self.grid.inrange(l, c) and not self.hassnake(l, c):
             return l, c
         else:
             return -1, -1
@@ -135,18 +166,24 @@ class Snake:
                 newl -= 1
             if direction == DOWN:
                 newl += 1
-
-            self.grid.set(newl, newc, self.snake)
-            self.line = newl
-            self.column = newc
-
+            
             if self.hasfood(newl, newc):
                 self.eaten += 1
                 self.randomfood()
+                self.position = self.position.prepend(Position(newl, newc))
+            
+            self.line = newl
+            self.column = newc
+
+            self.position.move(self.line, self.column)
+
+            self.movingdir = direction
 
             return True
 
         else:
+            self.alive = False
+            self.eaten = 0
             return False
             
     def processkey(self, key):
